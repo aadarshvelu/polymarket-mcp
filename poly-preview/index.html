@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Gamma API Explorer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2333;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #d2a8ff;
+      --danger: #f85149;
+      --warning: #d29922;
+      --tag-bg: #1f6feb22;
+      --tag-border: #1f6feb55;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Layout */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .sidebar-header p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: monospace;
+    }
+
+    .nav-group {
+      padding: 12px 0;
+    }
+
+    .nav-group-title {
+      padding: 4px 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      border-left: 2px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--surface2);
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+
+    .nav-item .method {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: monospace;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: #1f6feb22;
+      color: var(--accent);
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .main-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .main-header h2 {
+      font-size: 22px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .main-header .method-badge {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #1f6feb33;
+      color: var(--accent);
+    }
+
+    .main-header .endpoint-path {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      background: var(--bg);
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .main-header .description {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+    }
+
+    /* Panels */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: 100%;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+
+    .panel-body {
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Parameters form */
+    .param-group {
+      margin-bottom: 16px;
+    }
+
+    .param-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .param-type {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--accent3);
+      background: #d2a8ff15;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    .param-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* URL preview */
+    .url-preview {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent2);
+      word-break: break-all;
+      border: 1px solid var(--border);
+    }
+
+    .url-preview .base { color: var(--text-muted); }
+    .url-preview .path { color: var(--accent); }
+    .url-preview .query-key { color: var(--accent3); }
+    .url-preview .query-val { color: var(--accent2); }
+
+    /* Response */
+    .response-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+
+    .status-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    .status-badge.ok {
+      background: #3fb95022;
+      color: var(--accent2);
+    }
+
+    .status-badge.error {
+      background: #f8514922;
+      color: var(--danger);
+    }
+
+    .response-time {
+      color: var(--text-muted);
+    }
+
+    .response-count {
+      color: var(--warning);
+    }
+
+    .json-output {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow: auto;
+      max-height: calc(100vh - 340px);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .json-key { color: var(--accent); }
+    .json-str { color: var(--accent2); }
+    .json-num { color: var(--accent3); }
+    .json-bool { color: var(--warning); }
+    .json-null { color: var(--text-muted); }
+
+    .placeholder-msg {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Data structure diagram */
+    .structure-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    .structure-box .field { color: var(--accent); }
+    .structure-box .type { color: var(--accent3); }
+    .structure-box .comment { color: var(--text-muted); font-style: italic; }
+
+    /* Copy button */
+    .btn-copy {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .btn-copy:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-copy.copied { color: var(--accent2); border-color: var(--accent2); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* Collapsible JSON */
+    .json-toggle {
+      cursor: pointer;
+      user-select: none;
+    }
+    .json-toggle::before {
+      content: '▼ ';
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .json-toggle.collapsed::before {
+      content: '▶ ';
+    }
+    .json-toggle.collapsed + .json-collapsible {
+      display: none;
+    }
+    .json-collapsed-hint {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Tabs for response items */
+    .response-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .response-tab {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .response-tab.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h1>Gamma API Explorer</h1>
+        <p>gamma-api.polymarket.com</p>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Events</div>
+        <div class="nav-item active" data-endpoint="list-events">
+          <span class="method">GET</span> /events
+        </div>
+        <div class="nav-item" data-endpoint="get-event">
+          <span class="method">GET</span> /events/{id}
+        </div>
+        <div class="nav-item" data-endpoint="get-event-slug">
+          <span class="method">GET</span> /events/slug/{slug}
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Markets</div>
+        <div class="nav-item" data-endpoint="list-markets">
+          <span class="method">GET</span> /markets
+        </div>
+        <div class="nav-item" data-endpoint="get-market">
+          <span class="method">GET</span> /markets/{id}
+        </div>
+        <div class="nav-item" data-endpoint="get-market-slug">
+          <span class="method">GET</span> /markets/slug/{slug}
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Discovery</div>
+        <div class="nav-item" data-endpoint="search">
+          <span class="method">GET</span> /public-search
+        </div>
+        <div class="nav-item" data-endpoint="tags">
+          <span class="method">GET</span> /tags
+        </div>
+        <div class="nav-item" data-endpoint="series">
+          <span class="method">GET</span> /series
+        </div>
+        <div class="nav-item" data-endpoint="sports">
+          <span class="method">GET</span> /sports
+        </div>
+        <div class="nav-item" data-endpoint="teams">
+          <span class="method">GET</span> /teams
+        </div>
+      </div>
+    </nav>
+
+    <main class="main">
+      <div class="main-header" id="main-header"></div>
+      <div class="content-area">
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-header">
+              <span>Parameters</span>
+              <button class="btn-secondary btn" style="padding:4px 12px;font-size:11px" onclick="resetParams()">Reset</button>
+            </div>
+            <div class="panel-body" id="params-panel"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span>Response</span>
+              <button class="btn-copy" id="copy-btn" onclick="copyResponse()">Copy</button>
+            </div>
+            <div class="panel-body" id="response-panel">
+              <div class="placeholder-msg">Click "Send Request" to see the response</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const DIRECT_BASE = 'https://gamma-api.polymarket.com';
+    const PROXIES = [
+      (url) => url, // try direct first
+      (url) => 'https://corsproxy.io/?' + encodeURIComponent(url),
+      (url) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    ];
+    let activeProxyIndex = 0;
+    const BASE = DIRECT_BASE;
+
+    const ENDPOINTS = {
+      'list-events': {
+        title: 'List Events',
+        method: 'GET',
+        path: '/events',
+        description: 'Fetch a paginated list of events. Events are top-level containers that group related markets. Each event contains one or more binary markets.',
+        params: [
+          { name: 'active', type: 'boolean', desc: 'Filter only live/tradable events' },
+          { name: 'closed', type: 'boolean', desc: 'Filter by closure status' },
+          { name: 'archived', type: 'boolean', desc: 'Filter archived events' },
+          { name: 'tag_id', type: 'string', desc: 'Filter by tag/category ID' },
+          { name: 'exclude_tag_id', type: 'string', desc: 'Exclude events with this tag ID' },
+          { name: 'related_tags', type: 'boolean', desc: 'Include events with related tags' },
+          { name: 'order', type: 'select', desc: 'Sort field', options: ['', 'volume_24hr', 'volume', 'liquidity', 'start_date', 'end_date', 'competitive', 'closed_time'] },
+          { name: 'ascending', type: 'boolean', desc: 'Sort ascending (default: descending)' },
+          { name: 'limit', type: 'number', desc: 'Results per page', default: 10 },
+          { name: 'offset', type: 'number', desc: 'Number of results to skip', default: 0 },
+        ]
+      },
+      'get-event': {
+        title: 'Get Event by ID',
+        method: 'GET',
+        path: '/events/{id}',
+        description: 'Retrieve a single event by its unique identifier. Returns the event with all its associated markets.',
+        params: [
+          { name: 'id', type: 'string', desc: 'Event ID (numeric)', required: true, pathParam: true },
+        ]
+      },
+      'get-event-slug': {
+        title: 'Get Event by Slug',
+        method: 'GET',
+        path: '/events/slug/{slug}',
+        description: 'Retrieve a single event using its URL-friendly slug identifier.',
+        params: [
+          { name: 'slug', type: 'string', desc: 'URL-friendly event slug', required: true, pathParam: true },
+        ]
+      },
+      'list-markets': {
+        title: 'List Markets',
+        method: 'GET',
+        path: '/markets',
+        description: 'Fetch a paginated list of markets. Each market represents a binary Yes/No tradable outcome. Markets belong to events.',
+        params: [
+          { name: 'active', type: 'boolean', desc: 'Filter only active markets' },
+          { name: 'closed', type: 'boolean', desc: 'Filter by closure status' },
+          { name: 'archived', type: 'boolean', desc: 'Filter archived markets' },
+          { name: 'enableOrderBook', type: 'boolean', desc: 'Only markets tradable via CLOB' },
+          { name: 'tag_id', type: 'string', desc: 'Filter by tag/category ID' },
+          { name: 'order', type: 'select', desc: 'Sort field', options: ['', 'volume_24hr', 'volume', 'liquidity', 'start_date', 'end_date', 'competitive', 'closed_time'] },
+          { name: 'ascending', type: 'boolean', desc: 'Sort ascending (default: descending)' },
+          { name: 'limit', type: 'number', desc: 'Results per page', default: 10 },
+          { name: 'offset', type: 'number', desc: 'Number of results to skip', default: 0 },
+        ]
+      },
+      'get-market': {
+        title: 'Get Market by ID',
+        method: 'GET',
+        path: '/markets/{id}',
+        description: 'Retrieve a single market by its unique identifier. Returns full market details including condition ID, token IDs, outcomes, and prices.',
+        params: [
+          { name: 'id', type: 'string', desc: 'Market ID (numeric or condition ID)', required: true, pathParam: true },
+        ]
+      },
+      'get-market-slug': {
+        title: 'Get Market by Slug',
+        method: 'GET',
+        path: '/markets/slug/{slug}',
+        description: 'Retrieve a single market using its URL-friendly slug identifier.',
+        params: [
+          { name: 'slug', type: 'string', desc: 'URL-friendly market slug', required: true, pathParam: true },
+        ]
+      },
+      'search': {
+        title: 'Public Search',
+        method: 'GET',
+        path: '/public-search',
+        description: 'Search across events, markets, and public profiles. Returns matching results across all entity types.',
+        params: [
+          { name: 'query', type: 'string', desc: 'Search query text', required: true },
+          { name: 'limit', type: 'number', desc: 'Results per page', default: 10 },
+          { name: 'offset', type: 'number', desc: 'Number of results to skip', default: 0 },
+        ]
+      },
+      'tags': {
+        title: 'Tags',
+        method: 'GET',
+        path: '/tags',
+        description: 'List all available tags/categories. Tags help categorize and filter events and markets by topic (e.g., Politics, Crypto, Sports).',
+        params: []
+      },
+      'series': {
+        title: 'Series',
+        method: 'GET',
+        path: '/series',
+        description: 'List event series. A series groups related events that recur over time (e.g., weekly predictions on the same topic).',
+        params: [
+          { name: 'limit', type: 'number', desc: 'Results per page', default: 10 },
+          { name: 'offset', type: 'number', desc: 'Number of results to skip', default: 0 },
+        ]
+      },
+      'sports': {
+        title: 'Sports',
+        method: 'GET',
+        path: '/sports',
+        description: 'Get sports metadata including leagues and associated tag IDs. Use the returned tag IDs to filter events by sport.',
+        params: []
+      },
+      'teams': {
+        title: 'Teams',
+        method: 'GET',
+        path: '/teams',
+        description: 'List teams. Teams represent organized groups or entities within the Polymarket ecosystem.',
+        params: [
+          { name: 'limit', type: 'number', desc: 'Results per page', default: 10 },
+          { name: 'offset', type: 'number', desc: 'Number of results to skip', default: 0 },
+        ]
+      },
+    };
+
+    let currentEndpoint = 'list-events';
+    let lastResponse = null;
+    let lastResponseText = '';
+
+    // Initialize
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelector('.nav-item.active')?.classList.remove('active');
+        item.classList.add('active');
+        currentEndpoint = item.dataset.endpoint;
+        renderEndpoint();
+      });
+    });
+
+    function renderEndpoint() {
+      const ep = ENDPOINTS[currentEndpoint];
+      document.getElementById('main-header').innerHTML = `
+        <h2><span class="method-badge">${ep.method}</span> ${ep.title}</h2>
+        <div class="endpoint-path">${BASE}${ep.path}</div>
+        <div class="description">${ep.description}</div>
+      `;
+      renderParams();
+      document.getElementById('response-panel').innerHTML = '<div class="placeholder-msg">Click "Send Request" to see the response</div>';
+      lastResponse = null;
+      lastResponseText = '';
+    }
+
+    function renderParams() {
+      const ep = ENDPOINTS[currentEndpoint];
+      const panel = document.getElementById('params-panel');
+
+      if (ep.params.length === 0) {
+        panel.innerHTML = `
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">No parameters required for this endpoint.</p>
+          <div class="url-preview" id="url-preview"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="sendRequest()">Send Request</button>
+          </div>
+        `;
+        updateUrlPreview();
+        return;
+      }
+
+      let html = '';
+      for (const p of ep.params) {
+        html += `<div class="param-group">`;
+        html += `<label>${p.name} ${p.required ? '<span style="color:var(--danger)">*</span>' : ''} <span class="param-type">${p.type === 'select' ? 'string' : p.type}</span></label>`;
+        html += `<div class="param-desc">${p.desc}</div>`;
+
+        if (p.type === 'boolean') {
+          html += `<select id="param-${p.name}" onchange="updateUrlPreview()">
+            <option value="">— not set —</option>
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>`;
+        } else if (p.type === 'select') {
+          html += `<select id="param-${p.name}" onchange="updateUrlPreview()">`;
+          for (const opt of p.options) {
+            html += `<option value="${opt}">${opt || '— not set —'}</option>`;
+          }
+          html += `</select>`;
+        } else if (p.type === 'number') {
+          html += `<input type="number" id="param-${p.name}" value="${p.default ?? ''}" oninput="updateUrlPreview()">`;
+        } else {
+          html += `<input type="text" id="param-${p.name}" placeholder="${p.pathParam ? 'Required' : 'Optional'}" oninput="updateUrlPreview()">`;
+        }
+        html += `</div>`;
+      }
+
+      html += `<div class="url-preview" id="url-preview"></div>`;
+      html += `<div class="btn-row">
+        <button class="btn btn-primary" id="send-btn" onclick="sendRequest()">Send Request</button>
+      </div>`;
+
+      panel.innerHTML = html;
+      updateUrlPreview();
+    }
+
+    function buildUrl() {
+      const ep = ENDPOINTS[currentEndpoint];
+      let path = ep.path;
+      const queryParams = [];
+
+      for (const p of ep.params) {
+        const el = document.getElementById(`param-${p.name}`);
+        if (!el) continue;
+        const val = el.value.trim();
+        if (!val) continue;
+
+        if (p.pathParam) {
+          path = path.replace(`{${p.name}}`, encodeURIComponent(val));
+        } else {
+          queryParams.push([p.name, val]);
+        }
+      }
+
+      let url = BASE + path;
+      if (queryParams.length > 0) {
+        url += '?' + queryParams.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+      }
+      return url;
+    }
+
+    function updateUrlPreview() {
+      const preview = document.getElementById('url-preview');
+      if (!preview) return;
+
+      const ep = ENDPOINTS[currentEndpoint];
+      let path = ep.path;
+      const queryParts = [];
+
+      for (const p of ep.params) {
+        const el = document.getElementById(`param-${p.name}`);
+        if (!el) continue;
+        const val = el.value.trim();
+        if (!val) continue;
+
+        if (p.pathParam) {
+          path = path.replace(`{${p.name}}`, `<span class="query-val">${escapeHtml(val)}</span>`);
+        } else {
+          queryParts.push(`<span class="query-key">${p.name}</span>=<span class="query-val">${escapeHtml(val)}</span>`);
+        }
+      }
+
+      let html = `<span class="base">${BASE}</span><span class="path">${path}</span>`;
+      if (queryParts.length > 0) {
+        html += '?' + queryParts.join('&');
+      }
+      preview.innerHTML = html;
+    }
+
+    async function sendRequest() {
+      const ep = ENDPOINTS[currentEndpoint];
+      const responsePanel = document.getElementById('response-panel');
+      const sendBtn = document.getElementById('send-btn');
+
+      // Validate required params
+      for (const p of ep.params) {
+        if (p.required) {
+          const el = document.getElementById(`param-${p.name}`);
+          if (!el || !el.value.trim()) {
+            responsePanel.innerHTML = `<div class="response-meta"><span class="status-badge error">Error</span></div><div class="json-output" style="color:var(--danger)">Missing required parameter: ${p.name}</div>`;
+            return;
+          }
+        }
+      }
+
+      const directUrl = buildUrl();
+
+      if (sendBtn) sendBtn.disabled = true;
+      responsePanel.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div><p style="color:var(--text-muted);margin-top:12px;font-size:13px">Fetching...</p></div>';
+
+      const start = performance.now();
+
+      // Try from the last working proxy, then fall through others
+      let lastErr = null;
+      for (let attempt = 0; attempt < PROXIES.length; attempt++) {
+        const idx = (activeProxyIndex + attempt) % PROXIES.length;
+        const fetchUrl = PROXIES[idx](directUrl);
+        try {
+          const res = await fetch(fetchUrl);
+          const elapsed = Math.round(performance.now() - start);
+          const text = await res.text();
+          lastResponseText = text;
+
+          let data;
+          try {
+            data = JSON.parse(text);
+            lastResponse = data;
+          } catch {
+            data = text;
+            lastResponse = text;
+          }
+
+          activeProxyIndex = idx; // remember working proxy
+
+          const isOk = res.ok;
+          const count = Array.isArray(data) ? data.length : null;
+          const proxyLabel = idx === 0 ? 'direct' : `proxy ${idx}`;
+
+          let metaHtml = `<div class="response-meta">
+            <span class="status-badge ${isOk ? 'ok' : 'error'}">${res.status} ${res.statusText}</span>
+            <span class="response-time">${elapsed}ms</span>
+            ${count !== null ? `<span class="response-count">${count} item${count !== 1 ? 's' : ''}</span>` : ''}
+            <span style="color:var(--text-muted);font-size:11px">via ${proxyLabel}</span>
+          </div>`;
+
+          responsePanel.innerHTML = metaHtml + `<div class="json-output">${syntaxHighlight(data)}</div>`;
+          if (sendBtn) sendBtn.disabled = false;
+          return;
+        } catch (err) {
+          lastErr = err;
+          continue; // try next proxy
+        }
+      }
+
+      // All proxies failed
+      responsePanel.innerHTML = `<div class="response-meta"><span class="status-badge error">Network Error</span></div><div class="json-output" style="color:var(--danger)">${escapeHtml(lastErr?.message || 'Request failed')}\n\nAll CORS proxies failed. Open the URL directly:\n<a href="${escapeHtml(directUrl)}" target="_blank" style="color:var(--accent)">${escapeHtml(directUrl)}</a></div>`;
+      if (sendBtn) sendBtn.disabled = false;
+    }
+
+    function syntaxHighlight(data, depth = 0, maxInitialExpand = 2) {
+      if (data === null) return '<span class="json-null">null</span>';
+      if (typeof data === 'boolean') return `<span class="json-bool">${data}</span>`;
+      if (typeof data === 'number') return `<span class="json-num">${data}</span>`;
+      if (typeof data === 'string') {
+        const escaped = escapeHtml(data);
+        // Detect URLs and make them clickable
+        if (/^https?:\/\//.test(data)) {
+          return `<span class="json-str">"<a href="${escaped}" target="_blank" style="color:var(--accent2)">${escaped}</a>"</span>`;
+        }
+        // Truncate long strings
+        if (escaped.length > 200) {
+          return `<span class="json-str">"${escaped.substring(0, 200)}..."</span>`;
+        }
+        return `<span class="json-str">"${escaped}"</span>`;
+      }
+
+      const indent = '  '.repeat(depth);
+      const childIndent = '  '.repeat(depth + 1);
+      const id = 'j' + Math.random().toString(36).substr(2, 9);
+
+      if (Array.isArray(data)) {
+        if (data.length === 0) return '[]';
+        const collapsed = depth >= maxInitialExpand ? ' collapsed' : '';
+        let items = data.map((item, i) => {
+          const comma = i < data.length - 1 ? ',' : '';
+          return `${childIndent}${syntaxHighlight(item, depth + 1, maxInitialExpand)}${comma}`;
+        }).join('\n');
+        return `<span class="json-toggle${collapsed}" onclick="this.classList.toggle('collapsed')">[</span><span class="json-collapsible">\n${items}\n${indent}</span><span class="json-collapsed-hint" style="display:${collapsed ? 'inline' : 'none'}"> ${data.length} items... </span>]`;
+      }
+
+      if (typeof data === 'object') {
+        const keys = Object.keys(data);
+        if (keys.length === 0) return '{}';
+        const collapsed = depth >= maxInitialExpand ? ' collapsed' : '';
+        let entries = keys.map((key, i) => {
+          const comma = i < keys.length - 1 ? ',' : '';
+          return `${childIndent}<span class="json-key">"${escapeHtml(key)}"</span>: ${syntaxHighlight(data[key], depth + 1, maxInitialExpand)}${comma}`;
+        }).join('\n');
+        return `<span class="json-toggle${collapsed}" onclick="this.classList.toggle('collapsed')">{</span><span class="json-collapsible">\n${entries}\n${indent}</span><span class="json-collapsed-hint" style="display:${collapsed ? 'inline' : 'none'}"> ${keys.length} fields... </span>}`;
+      }
+
+      return escapeHtml(String(data));
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function resetParams() {
+      renderParams();
+      document.getElementById('response-panel').innerHTML = '<div class="placeholder-msg">Click "Send Request" to see the response</div>';
+    }
+
+    function copyResponse() {
+      if (!lastResponseText) return;
+      const btn = document.getElementById('copy-btn');
+      navigator.clipboard.writeText(typeof lastResponse === 'object' ? JSON.stringify(lastResponse, null, 2) : lastResponseText).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    }
+
+    // Fix collapsed hint visibility with toggle
+    const origToggle = document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('json-toggle')) {
+        const hint = e.target.querySelector('~ .json-collapsed-hint') ||
+                     e.target.parentElement?.querySelector('.json-collapsed-hint');
+      }
+    });
+
+    // Render initial
+    renderEndpoint();
+  </script>
+</body>
+</html>

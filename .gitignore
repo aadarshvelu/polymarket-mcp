@@ -1,0 +1,5 @@
+data/
+btc_polymarket_data.json
+btc_options_analysis_report.html
+node_modules/
+dist/
