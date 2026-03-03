@@ -106,6 +106,10 @@ async function main() {
       sessionIdGenerator: undefined, // stateless
     });
     const httpServer = createServer((req, res) => {
+      if (req.method === 'GET' && req.url === '/health') {
+        res.writeHead(200).end('ok');
+        return;
+      }
       transport.handleRequest(req, res).catch((err) => {
         console.error('Transport error:', err);
         if (!res.headersSent) res.writeHead(500).end();
