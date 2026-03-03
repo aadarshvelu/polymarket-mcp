@@ -2,6 +2,8 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createServer } from 'node:http';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -96,9 +98,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start server
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Polymarket Gamma MCP Server v1.0.0 running on stdio');
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
+
+  if (port) {
+    // HTTP mode for Railway
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined, // stateless
+    });
+    const httpServer = createServer((req, res) => {
+      transport.handleRequest(req, res).catch((err) => {
+        console.error('Transport error:', err);
+        if (!res.headersSent) res.writeHead(500).end();
+      });
+    });
+    await server.connect(transport);
+    httpServer.listen(port, '0.0.0.0', () => {
+      console.error(`Polymarket Gamma MCP Server v1.0.0 listening on port ${port}`);
+    });
+  } else {
+    // Stdio mode for local MCP clients
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error('Polymarket Gamma MCP Server v1.0.0 running on stdio');
+  }
 }
 
 main().catch((error) => {
